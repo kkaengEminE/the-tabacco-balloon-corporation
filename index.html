@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Tobacco Balloon Corporation — 담풍사</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Courier+Prime&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --brown: #3e2723;
+  --brown-light: #5d4037;
+  --brown-dark: #1b0000;
+  --gold: #c9a84c;
+  --gold-dim: #8d7034;
+  --green-neon: #39ff14;
+  --green-dark: #0a3d00;
+  --cream: #f5f0e1;
+  --red: #c62828;
+  --red-light: #ff5252;
+  --parchment: #e8dcc8;
+  --ink: #2c1810;
+}
+
+body {
+  font-family: 'Noto Sans KR', 'Playfair Display', serif;
+  background: var(--brown-dark);
+  color: var(--cream);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+#game-container {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #1a0f0a 0%, #2c1810 50%, #1a0f0a 100%);
+  border-left: 2px solid var(--gold-dim);
+  border-right: 2px solid var(--gold-dim);
+  position: relative;
+}
+
+/* ===== TOP BAR: Asher Status ===== */
+#top-bar {
+  background: linear-gradient(180deg, var(--brown) 0%, var(--brown-dark) 100%);
+  border-bottom: 2px solid var(--gold);
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+#asher-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  color: var(--gold);
+  margin-right: 12px;
+  white-space: nowrap;
+}
+
+#asher-name span {
+  font-size: 11px;
+  color: var(--gold-dim);
+}
+
+.stat-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.stat-bar label {
+  font-size: 11px;
+  color: var(--parchment);
+  width: 36px;
+  text-align: right;
+}
+
+.stat-bar .bar-outer {
+  width: 80px;
+  height: 14px;
+  background: var(--brown-dark);
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-bar .bar-inner {
+  height: 100%;
+  transition: width 0.3s, background 0.3s;
+  border-radius: 1px;
+}
+
+.stat-bar .bar-value {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  color: #fff;
+  text-align: center;
+  line-height: 14px;
+  text-shadow: 0 0 2px #000;
+}
+
+.bar-hp .bar-inner { background: linear-gradient(90deg, var(--red), var(--red-light)); }
+.bar-food .bar-inner { background: linear-gradient(90deg, #e65100, #ff9800); }
+.bar-sleep .bar-inner { background: linear-gradient(90deg, #1565c0, #64b5f6); }
+.bar-wc .bar-inner { background: linear-gradient(90deg, #6a1b9a, #ce93d8); }
+.bar-tobacco .bar-inner { background: linear-gradient(90deg, #2e7d32, var(--green-neon)); }
+
+#time-display {
+  margin-left: auto;
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px;
+  color: var(--green-neon);
+  text-shadow: 0 0 6px var(--green-neon);
+  white-space: nowrap;
+}
+
+/* ===== MAIN AREA ===== */
+#main-area {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* Left: Balloon viewport */
+#balloon-viewport {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #2c1810 0%, #0d0705 100%);
+  border-right: 1px solid var(--gold-dim);
+  overflow: hidden;
+}
+
+#balloon-viewport::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0v60M0 30h60' stroke='%23c9a84c' stroke-width='0.3' opacity='0.08'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+#desk-scene {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+#asher-ascii {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--parchment);
+  white-space: pre;
+  margin-bottom: 8px;
+  text-shadow: 0 0 1px rgba(201,168,76,0.3);
+}
+
+#smoke-effect {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.smoke-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle, rgba(200,200,200,0.6) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: smokeRise 2s ease-out forwards;
+}
+
+@keyframes smokeRise {
+  0% { opacity: 0.8; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), -80px) scale(3); }
+}
+
+#balloon-container {
+  position: relative;
+  margin-top: 12px;
+}
+
+#main-balloon {
+  width: 120px;
+  height: 150px;
+  background: radial-gradient(ellipse at 40% 35%, #ff7043, #d32f2f 60%, #b71c1c);
+  border-radius: 50% 50% 50% 50% / 55% 55% 45% 45%;
+  position: relative;
+  transition: transform 0.5s;
+  box-shadow: inset -8px -8px 20px rgba(0,0,0,0.4), 0 0 20px rgba(255,112,67,0.3);
+  animation: balloonFloat 3s ease-in-out infinite;
+}
+
+@keyframes balloonFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+#main-balloon::after {
+  content: '';
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 20px solid #b71c1c;
+}
+
+#balloon-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  text-align: center;
+  pointer-events: none;
+}
+
+#balloon-label .customers {
+  font-family: 'Courier Prime', monospace;
+  font-size: 18px;
+  color: var(--green-neon);
+  text-shadow: 0 0 8px var(--green-neon);
+  display: block;
+}
+
+/* Enterprise balloons */
+#enterprise-balloons {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ent-balloon {
+  width: 50px;
+  height: 62px;
+  background: radial-gradient(ellipse at 40% 35%, #7e57c2, #4527a0 60%, #311b92);
+  border-radius: 50% 50% 50% 50% / 55% 55% 45% 45%;
+  position: relative;
+  box-shadow: inset -4px -4px 10px rgba(0,0,0,0.4), 0 0 10px rgba(126,87,194,0.3);
+  animation: balloonFloat 2.5s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ent-balloon::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 12px solid #311b92;
+}
+
+.ent-balloon span {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 0 0 4px #000;
+}
+
+/* Right panel */
+#right-panel {
+  background: linear-gradient(180deg, var(--brown) 0%, #1a0f0a 100%);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px;
+  gap: 12px;
+}
+
+.panel-section {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.panel-section h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  color: var(--gold);
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+/* Finance */
+.finance-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.finance-row .val {
+  font-family: 'Courier Prime', monospace;
+  color: var(--green-neon);
+  text-shadow: 0 0 4px var(--green-neon);
+}
+
+.finance-row .val.negative {
+  color: var(--red-light);
+  text-shadow: 0 0 4px var(--red-light);
+}
+
+/* Staff */
+#staff-count {
+  font-family: 'Courier Prime', monospace;
+  color: var(--green-neon);
+}
+
+/* Log */
+#log-area {
+  flex: 1;
+  min-height: 80px;
+}
+
+#log-list {
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 11px;
+  font-family: 'Courier Prime', monospace;
+  color: var(--parchment);
+  line-height: 1.5;
+}
+
+#log-list::-webkit-scrollbar { width: 4px; }
+#log-list::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+.log-entry { opacity: 0.9; }
+.log-entry.warning { color: #ff9800; }
+.log-entry.danger { color: var(--red-light); }
+.log-entry.success { color: var(--green-neon); }
+
+/* Buff indicator */
+#buff-indicator {
+  text-align: center;
+  padding: 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: none;
+}
+
+#buff-indicator.buff {
+  display: block;
+  background: rgba(57,255,20,0.15);
+  border: 1px solid var(--green-neon);
+  color: var(--green-neon);
+  animation: pulse 1.5s infinite;
+}
+
+#buff-indicator.debuff {
+  display: block;
+  background: rgba(198,40,40,0.15);
+  border: 1px solid var(--red-light);
+  color: var(--red-light);
+  animation: pulse 0.8s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ===== BOTTOM BAR: Actions ===== */
+#bottom-bar {
+  background: linear-gradient(0deg, var(--brown) 0%, var(--brown-dark) 100%);
+  border-top: 2px solid var(--gold);
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.action-btn {
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  padding: 8px 16px;
+  border: 1px solid var(--gold);
+  background: linear-gradient(180deg, var(--brown-light) 0%, var(--brown) 100%);
+  color: var(--cream);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.action-btn:hover {
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%);
+  color: var(--brown-dark);
+  box-shadow: 0 0 10px rgba(201,168,76,0.4);
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-btn.work-btn {
+  border-color: var(--green-neon);
+  box-shadow: 0 0 6px rgba(57,255,20,0.2);
+}
+
+.action-btn.smoke-btn {
+  border-color: #66bb6a;
+}
+
+.action-btn.danger-btn {
+  border-color: var(--red-light);
+}
+
+/* ===== MODALS ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay.active { display: flex; }
+
+.modal-box {
+  background: linear-gradient(180deg, var(--brown) 0%, var(--brown-dark) 100%);
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 0 40px rgba(201,168,76,0.3);
+}
+
+.modal-box h2 {
+  font-family: 'Playfair Display', serif;
+  color: var(--gold);
+  font-size: 20px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.modal-box .report-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(201,168,76,0.2);
+  font-size: 13px;
+}
+
+.modal-box .report-row .val {
+  font-family: 'Courier Prime', monospace;
+  color: var(--green-neon);
+}
+
+.modal-box .modal-btn {
+  display: block;
+  margin: 16px auto 0;
+  padding: 10px 32px;
+  font-family: 'Playfair Display', serif;
+  font-size: 14px;
+  border: 1px solid var(--gold);
+  background: var(--brown-light);
+  color: var(--cream);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.modal-box .modal-btn:hover {
+  background: var(--gold);
+  color: var(--brown-dark);
+}
+
+/* Game Over */
+#gameover-modal .modal-box {
+  border-color: var(--red-light);
+  text-align: center;
+}
+
+#gameover-reason {
+  color: var(--red-light);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+#revive-btn {
+  background: linear-gradient(180deg, #e65100, #bf360c);
+  border-color: #ff9800;
+  animation: pulse 1s infinite;
+  margin-bottom: 8px;
+}
+
+#restart-btn {
+  background: var(--brown);
+}
+
+/* Meeting modal */
+#meeting-modal .modal-box {
+  border-color: #7e57c2;
+}
+
+#meeting-modal h2 { color: #ce93d8; }
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--brown);
+  border: 1px solid var(--gold);
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--cream);
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 200;
+  pointer-events: none;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Start screen */
+#start-screen {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--brown-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+#start-screen h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(201,168,76,0.5);
+  margin-bottom: 4px;
+}
+
+#start-screen .subtitle {
+  font-size: 14px;
+  color: var(--gold-dim);
+  margin-bottom: 8px;
+}
+
+#start-screen .desc {
+  font-size: 12px;
+  color: var(--parchment);
+  text-align: center;
+  max-width: 400px;
+  line-height: 1.7;
+  margin-bottom: 24px;
+  opacity: 0.8;
+}
+
+#start-btn {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  padding: 12px 48px;
+  border: 2px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+#start-btn:hover {
+  background: var(--gold);
+  color: var(--brown-dark);
+  box-shadow: 0 0 30px rgba(201,168,76,0.5);
+}
+
+/* Sleeping overlay */
+#sleep-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.92);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  flex-direction: column;
+}
+
+#sleep-overlay.active { display: flex; }
+
+#sleep-overlay .zzz {
+  font-size: 48px;
+  color: #64b5f6;
+  animation: zzz 1.5s ease-in-out infinite;
+}
+
+@keyframes zzz {
+  0%, 100% { opacity: 0.3; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+#sleep-overlay .sleep-info {
+  color: #90caf9;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+/* Progress bar for actions */
+#action-progress {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 6px;
+  background: var(--brown-dark);
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  overflow: hidden;
+  display: none;
+  z-index: 50;
+}
+
+#action-progress.active { display: block; }
+
+#action-progress-bar {
+  height: 100%;
+  background: var(--green-neon);
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #main-area { grid-template-columns: 1fr; }
+  #right-panel { max-height: 200px; }
+  .stat-bar .bar-outer { width: 60px; }
+  .stat-bar label { width: 28px; font-size: 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div id="start-screen">
+  <h1>The Tobacco Balloon Corporation</h1>
+  <div class="subtitle">담풍사 (擔風社) — Est. 1887</div>
+  <div class="desc">
+    19세기 런던, 신사 CEO 애셔 애덤스는 맥북으로 AI 사업을 운영합니다.<br>
+    파이프 담배로 각성하여 벌룬 서비스를 성장시키되,<br>
+    과흡연의 대가를 견뎌내야 합니다.<br><br>
+    식사하고, 잠자고, 담배 피우고, 살아남으세요.
+  </div>
+  <button id="start-btn">Enter the Corporation</button>
+</div>
+
+<!-- GAME -->
+<div id="game-container">
+  <!-- Top Bar -->
+  <div id="top-bar">
+    <div id="asher-name">Asher Adams<br><span>CEO, T.B.C.</span></div>
+    <div class="stat-bar bar-hp">
+      <label>생명</label>
+      <div class="bar-outer"><div class="bar-inner" id="bar-hp"></div><div class="bar-value" id="val-hp"></div></div>
+    </div>
+    <div class="stat-bar bar-food">
+      <label>식사</label>
+      <div class="bar-outer"><div class="bar-inner" id="bar-food"></div><div class="bar-value" id="val-food"></div></div>
+    </div>
+    <div class="stat-bar bar-sleep">
+      <label>수면</label>
+      <div class="bar-outer"><div class="bar-inner" id="bar-sleep"></div><div class="bar-value" id="val-sleep"></div></div>
+    </div>
+    <div class="stat-bar bar-wc">
+      <label>화장</label>
+      <div class="bar-outer"><div class="bar-inner" id="bar-wc"></div><div class="bar-value" id="val-wc"></div></div>
+    </div>
+    <div class="stat-bar bar-tobacco">
+      <label>담배</label>
+      <div class="bar-outer"><div class="bar-inner" id="bar-tobacco" style="max-width:200%"></div><div class="bar-value" id="val-tobacco"></div></div>
+    </div>
+    <div id="time-display">Month 1 · Day 1 · 08:00</div>
+  </div>
+
+  <!-- Main Area -->
+  <div id="main-area">
+    <!-- Left: Balloon Scene -->
+    <div id="balloon-viewport">
+      <div id="desk-scene">
+        <div id="smoke-effect"></div>
+        <pre id="asher-ascii">
+    ┌─────────┐
+    │  ◉   ◉  │
+    │    ▽    │
+    │   ═══   │
+    └────┬────┘
+     ┌───┴───┐
+     │▓▓▓▓▓▓▓│
+     │▓ASHER▓│
+     │▓▓▓▓▓▓▓│
+     └┬─────┬┘
+      │     │
+    ══╧═════╧══
+    ⌨️  💻  ☕
+        </pre>
+        <div id="balloon-container">
+          <div id="main-balloon">
+            <div id="balloon-label">
+              Balloon<br>
+              <span class="customers" id="balloon-customers">100</span>
+            </div>
+          </div>
+        </div>
+        <div id="enterprise-balloons"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div id="right-panel">
+      <div id="buff-indicator"></div>
+
+      <div class="panel-section">
+        <h3>Finance</h3>
+        <div class="finance-row"><span>자금</span><span class="val" id="money-val">£1,000</span></div>
+        <div class="finance-row"><span>월 매출</span><span class="val" id="revenue-val">£0</span></div>
+        <div class="finance-row"><span>월 지출</span><span class="val" id="expense-val">£0</span></div>
+        <div class="finance-row"><span>직원</span><span class="val" id="staff-val">0명</span></div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Work Progress</h3>
+        <div class="stat-bar" style="width:100%">
+          <div class="bar-outer" style="width:100%;height:18px;">
+            <div class="bar-inner" id="bar-work" style="background:linear-gradient(90deg,var(--green-dark),var(--green-neon));width:0%"></div>
+            <div class="bar-value" id="val-work" style="line-height:18px;font-size:11px">0%</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--gold-dim);margin-top:4px" id="work-speed-label">속도: ×1.0</div>
+      </div>
+
+      <div class="panel-section" id="log-area">
+        <h3>Journal</h3>
+        <div id="log-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div id="bottom-bar">
+    <button class="action-btn work-btn" id="btn-work">⚙ 일하기</button>
+    <button class="action-btn smoke-btn" id="btn-smoke">🪈 흡연</button>
+    <button class="action-btn" id="btn-eat">🍽 식사</button>
+    <button class="action-btn" id="btn-sleep">🛏 수면</button>
+    <button class="action-btn" id="btn-wc">🚽 화장실</button>
+    <button class="action-btn" id="btn-hire">👤 고용</button>
+    <button class="action-btn" id="btn-medicine">💊 약 구매</button>
+    <button class="action-btn" id="btn-expand">🏗 확장</button>
+  </div>
+</div>
+
+<!-- Sleep Overlay -->
+<div id="sleep-overlay">
+  <div class="zzz">Z z z . . .</div>
+  <div class="sleep-info" id="sleep-info">수면 중... 남은 시간: 3h</div>
+</div>
+
+<!-- Action Progress -->
+<div id="action-progress"><div id="action-progress-bar"></div></div>
+
+<!-- Monthly Report Modal -->
+<div class="modal-overlay" id="report-modal">
+  <div class="modal-box">
+    <h2>📊 Monthly Report</h2>
+    <div id="report-content"></div>
+    <button class="modal-btn" id="report-next-btn">다음 달 진행 →</button>
+  </div>
+</div>
+
+<!-- Meeting Modal -->
+<div class="modal-overlay" id="meeting-modal">
+  <div class="modal-box">
+    <h2>🤝 Enterprise Meeting</h2>
+    <div id="meeting-content"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+      <button class="modal-btn" id="meeting-accept">수주하기</button>
+      <button class="modal-btn" id="meeting-decline" style="border-color:var(--red)">거절</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game Over Modal -->
+<div class="modal-overlay" id="gameover-modal">
+  <div class="modal-box">
+    <h2>💀 GAME OVER</h2>
+    <div id="gameover-reason"></div>
+    <button class="modal-btn" id="revive-btn" style="display:none">📺 광고 시청하고 이어하기</button>
+    <button class="modal-btn" id="restart-btn">처음부터 다시 시작</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ===== GAME STATE =====
+const DEFAULT_STATE = () => ({
+  hp: 100,
+  food: 80,
+  sleep: 80,
+  wc: 80,
+  tobacco: 30,
+  money: 1000,
+  customers: 100,
+  staff: 0,
+  month: 1,
+  day: 1,
+  hour: 8,
+  minute: 0,
+  workProgress: 0,
+  workCompleted: 0,
+  totalWorkHours: 0,
+  totalSmokes: 0,
+  monthRevenue: 0,
+  monthExpense: 0,
+  enterpriseContracts: [],
+  reviveUsed: false,
+  paused: false,
+  sleeping: false,
+  actionInProgress: false,
+  gameOver: false,
+  meetingCooldown: 0,
+  staffHireCost: 200,
+  medicineCost: 80,
+});
+
+let S = DEFAULT_STATE();
+let lastTick = 0;
+let tickAccum = 0;
+const TICK_RATE = 200;
+const GAME_MINUTES_PER_TICK = 5;
+
+// ===== HELPERS =====
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function log(msg, type = '') {
+  const el = $('log-list');
+  const d = document.createElement('div');
+  d.className = 'log-entry ' + type;
+  const t = `${String(S.hour).padStart(2,'0')}:${String(S.minute).padStart(2,'0')}`;
+  d.textContent = `[${t}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  if (el.children.length > 80) el.removeChild(el.firstChild);
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function spawnSmoke() {
+  const container = $('smoke-effect');
+  for (let i = 0; i < 5; i++) {
+    const p = document.createElement('div');
+    p.className = 'smoke-particle';
+    p.style.setProperty('--dx', (Math.random() * 30 - 15) + 'px');
+    p.style.left = (Math.random() * 20 - 10) + 'px';
+    p.style.animationDelay = (Math.random() * 0.4) + 's';
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 2200);
+  }
+}
+
+// ===== WORK SPEED MULTIPLIER =====
+function getWorkSpeed() {
+  if (S.tobacco >= 70 && S.tobacco <= 110) return 2.11;
+  if (S.tobacco > 110 && S.tobacco <= 150) return 2.5;
+  if (S.tobacco > 150) return 3.0;
+  return 1.0;
+}
+
+// ===== GAME TICK =====
+function gameTick() {
+  if (S.paused || S.gameOver) return;
+
+  S.minute += GAME_MINUTES_PER_TICK;
+  if (S.minute >= 60) {
+    S.minute -= 60;
+    S.hour++;
+    if (S.hour >= 24) {
+      S.hour = 0;
+      S.day++;
+      if (S.day > 30) {
+        endOfMonth();
+        return;
+      }
+    }
+  }
+
+  if (!S.sleeping) {
+    S.food = clamp(S.food - 0.15, 0, 100);
+    S.sleep = clamp(S.sleep - 0.12, 0, 100);
+    S.wc = clamp(S.wc - 0.18, 0, 100);
+    S.tobacco = clamp(S.tobacco - 0.08, 0, 200);
+  } else {
+    S.sleep = clamp(S.sleep + 1.5, 0, 100);
+    S.wc = clamp(S.wc - 0.05, 0, 100);
+    if (S.sleep >= 95) {
+      S.sleeping = false;
+      $('sleep-overlay').classList.remove('active');
+      log('기상! 컨디션 회복.', 'success');
+    }
+  }
+
+  if (S.food <= 0) S.hp = clamp(S.hp - 0.5, 0, 100);
+  if (S.sleep <= 0) S.hp = clamp(S.hp - 0.3, 0, 100);
+  if (S.wc <= 0) S.hp = clamp(S.hp - 0.4, 0, 100);
+
+  if (S.tobacco > 120) {
+    const penalty = (S.tobacco - 120) * 0.008;
+    S.hp = clamp(S.hp - penalty, 0, 100);
+  }
+
+  S.customers = clamp(S.customers - 0.05, 0, 9999);
+
+  if (S.staff > 0) {
+    const autoWork = S.staff * 0.3;
+    S.customers = clamp(S.customers + autoWork * 0.02, 0, 9999);
+    S.workProgress = clamp(S.workProgress + autoWork * 0.1, 0, 100);
+  }
+
+  if (S.workProgress >= 100) {
+    S.workProgress = 0;
+    S.workCompleted++;
+    const earn = Math.floor(10 + S.customers * 0.5);
+    S.money += earn;
+    S.monthRevenue += earn;
+    S.customers = clamp(S.customers + 2, 0, 9999);
+    log(`작업 완료! +£${earn}`, 'success');
+  }
+
+  S.enterpriseContracts.forEach(c => {
+    c.value = clamp(c.value - 0.12, 0, 100);
+  });
+
+  const broken = S.enterpriseContracts.find(c => c.value <= 0);
+  if (broken) {
+    triggerGameOver(`엔터프라이즈 계약 "${broken.name}" 파기! 신뢰도 상실.`);
+    return;
+  }
+
+  if (!S.sleeping) {
+    S.meetingCooldown--;
+    if (S.meetingCooldown <= 0 && Math.random() < 0.003 && S.enterpriseContracts.length < 3) {
+      triggerMeeting();
+    }
+  }
+
+  if (S.hp <= 0) {
+    triggerGameOver('애셔 애덤스가 과로와 건강 악화로 쓰러졌습니다.');
+    return;
+  }
+
+  updateUI();
+}
+
+// ===== ACTIONS =====
+function doWork() {
+  if (S.sleeping || S.actionInProgress || S.paused) return;
+  const speed = getWorkSpeed();
+  S.workProgress = clamp(S.workProgress + 3 * speed, 0, 100);
+  S.totalWorkHours += 0.1;
+  S.customers = clamp(S.customers + 0.1 * speed, 0, 9999);
+}
+
+function doSmoke() {
+  if (S.sleeping || S.paused) return;
+  S.tobacco = clamp(S.tobacco + 15, 0, 200);
+  S.totalSmokes++;
+  spawnSmoke();
+  if (S.tobacco > 120) {
+    log(`과흡연 경고! 담배 ${Math.floor(S.tobacco)}%`, 'danger');
+  } else if (S.tobacco >= 70) {
+    log('각성 상태 돌입. 업무 효율 향상!', 'success');
+  }
+}
+
+function startTimedAction(type, duration, onComplete) {
+  if (S.sleeping || S.actionInProgress || S.paused) return;
+  S.actionInProgress = true;
+  const prog = $('action-progress');
+  const bar = $('action-progress-bar');
+  prog.classList.add('active');
+  let elapsed = 0;
+  const interval = setInterval(() => {
+    elapsed += 50;
+    bar.style.width = (elapsed / duration * 100) + '%';
+    if (elapsed >= duration) {
+      clearInterval(interval);
+      prog.classList.remove('active');
+      bar.style.width = '0%';
+      S.actionInProgress = false;
+      onComplete();
+    }
+  }, 50);
+}
+
+function doEat() {
+  startTimedAction('eat', 1200, () => {
+    S.food = clamp(S.food + 40, 0, 100);
+    S.money -= 15;
+    S.monthExpense += 15;
+    log('식사 완료. 포만감 회복.', 'success');
+  });
+}
+
+function doWC() {
+  startTimedAction('wc', 800, () => {
+    S.wc = clamp(S.wc + 50, 0, 100);
+    log('화장실 다녀옴.', '');
+  });
+}
+
+function doSleep() {
+  if (S.sleeping || S.actionInProgress || S.paused) return;
+  S.sleeping = true;
+  $('sleep-overlay').classList.add('active');
+  log('수면 시작...', '');
+}
+
+function doHire() {
+  if (S.paused) return;
+  if (S.money < S.staffHireCost) {
+    toast(`자금 부족! 고용 비용: £${S.staffHireCost}`);
+    return;
+  }
+  S.money -= S.staffHireCost;
+  S.monthExpense += S.staffHireCost;
+  S.staff++;
+  S.staffHireCost = Math.floor(S.staffHireCost * 1.5);
+  log(`직원 고용! (총 ${S.staff}명) 다음 비용: £${S.staffHireCost}`, 'success');
+}
+
+function doMedicine() {
+  if (S.paused) return;
+  if (S.money < S.medicineCost) {
+    toast(`자금 부족! 약 비용: £${S.medicineCost}`);
+    return;
+  }
+  S.money -= S.medicineCost;
+  S.monthExpense += S.medicineCost;
+  S.hp = clamp(S.hp + 25, 0, 100);
+  S.tobacco = clamp(S.tobacco - 20, 0, 200);
+  log('약 복용. 생명력 회복, 담배 수치 감소.', 'success');
+}
+
+// ===== ENTERPRISE MEETINGS =====
+function triggerMeeting() {
+  S.paused = true;
+  S.meetingCooldown = 300;
+  const contractValue = Math.floor(200 + Math.random() * 500 + S.customers * 2);
+  const name = 'ENT-' + String.fromCharCode(65 + S.enterpriseContracts.length);
+  $('meeting-content').innerHTML = `
+    <p style="margin-bottom:12px">외부 기업이 벌룬 서비스 계약을 제안합니다.</p>
+    <div class="report-row"><span>계약명</span><span class="val">${name}</span></div>
+    <div class="report-row"><span>계약금</span><span class="val">£${contractValue}</span></div>
+    <div class="report-row"><span>조건</span><span style="color:var(--red-light)">벌룬 수치 유지 필수</span></div>
+  `;
+  $('meeting-modal').classList.add('active');
+
+  $('meeting-accept').onclick = () => {
+    S.enterpriseContracts.push({ name, value: 80, reward: contractValue });
+    S.money += Math.floor(contractValue * 0.3);
+    S.monthRevenue += Math.floor(contractValue * 0.3);
+    log(`계약 "${name}" 수주! 선금 £${Math.floor(contractValue * 0.3)}`, 'success');
+    $('meeting-modal').classList.remove('active');
+    S.paused = false;
+  };
+
+  $('meeting-decline').onclick = () => {
+    log(`계약 "${name}" 거절.`, 'warning');
+    $('meeting-modal').classList.remove('active');
+    S.paused = false;
+  };
+}
+
+// ===== ENTERPRISE WORK =====
+function doEntWork(idx) {
+  if (S.sleeping || S.actionInProgress || S.paused) return;
+  const c = S.enterpriseContracts[idx];
+  if (!c) return;
+  const speed = getWorkSpeed();
+  c.value = clamp(c.value + 2 * speed, 0, 100);
+}
+
+// ===== END OF MONTH =====
+function endOfMonth() {
+  S.paused = true;
+  S.day = 1;
+
+  const staffCost = S.staff * 100;
+  S.money -= staffCost;
+  S.monthExpense += staffCost;
+
+  const entBonuses = S.enterpriseContracts.reduce((sum, c) => {
+    if (c.value > 30) {
+      const bonus = Math.floor(c.reward * 0.7);
+      return sum + bonus;
+    }
+    return sum;
+  }, 0);
+  S.money += entBonuses;
+  S.monthRevenue += entBonuses;
+
+  const totalRevenue = S.monthRevenue;
+  const totalExpense = S.monthExpense;
+
+  $('report-content').innerHTML = `
+    <div class="report-row"><span>📅 Month</span><span class="val">${S.month}</span></div>
+    <div class="report-row"><span>⏱ 총 노동 시간</span><span class="val">${S.totalWorkHours.toFixed(1)}h</span></div>
+    <div class="report-row"><span>🪈 흡연 횟수</span><span class="val">${S.totalSmokes}회</span></div>
+    <div class="report-row"><span>✅ 작업 완료</span><span class="val">${S.workCompleted}건</span></div>
+    <div class="report-row"><span>💰 매출</span><span class="val">£${totalRevenue}</span></div>
+    <div class="report-row"><span>📉 지출</span><span class="val" style="color:var(--red-light)">£${totalExpense}</span></div>
+    <div class="report-row"><span>💵 순이익</span><span class="val ${totalRevenue - totalExpense < 0 ? 'negative' : ''}">£${totalRevenue - totalExpense}</span></div>
+    <div class="report-row"><span>👥 회원 수</span><span class="val">${Math.floor(S.customers)}명</span></div>
+    <div class="report-row"><span>👤 직원</span><span class="val">${S.staff}명</span></div>
+    <div class="report-row"><span>📋 계약</span><span class="val">${S.enterpriseContracts.length}건</span></div>
+  `;
+
+  $('report-modal').classList.add('active');
+
+  if (S.money < 0) {
+    $('report-modal').classList.remove('active');
+    triggerGameOver(`파산! 잔고: £${S.money}`);
+    return;
+  }
+}
+
+$('report-next-btn').addEventListener('click', () => {
+  $('report-modal').classList.remove('active');
+  S.month++;
+  S.monthRevenue = 0;
+  S.monthExpense = 0;
+  S.workCompleted = 0;
+  S.totalWorkHours = 0;
+  S.totalSmokes = 0;
+  S.paused = false;
+  log(`=== Month ${S.month} 시작 ===`, 'success');
+});
+
+// ===== GAME OVER =====
+function triggerGameOver(reason) {
+  S.gameOver = true;
+  S.paused = true;
+  $('gameover-reason').textContent = reason;
+  $('revive-btn').style.display = S.reviveUsed ? 'none' : 'block';
+  $('gameover-modal').classList.add('active');
+}
+
+$('revive-btn').addEventListener('click', () => {
+  $('revive-btn').disabled = true;
+  $('revive-btn').textContent = '📺 광고 시청 중... (5초)';
+  setTimeout(() => {
+    S.reviveUsed = true;
+    S.gameOver = false;
+    S.paused = false;
+    S.hp = 50;
+    S.food = 50;
+    S.sleep = 50;
+    S.wc = 50;
+    S.tobacco = 30;
+    S.money = Math.max(S.money, 0);
+    S.enterpriseContracts = S.enterpriseContracts.filter(c => c.value > 0);
+    $('gameover-modal').classList.remove('active');
+    log('부활! 모든 수치 50%로 회복. 남은 기회 없음.', 'warning');
+    toast('부활 완료! 이번이 마지막 기회입니다.');
+  }, 5000);
+});
+
+$('restart-btn').addEventListener('click', () => {
+  $('gameover-modal').classList.remove('active');
+  $('sleep-overlay').classList.remove('active');
+  S = DEFAULT_STATE();
+  $('log-list').innerHTML = '';
+  log('=== 새 게임 시작 ===', 'success');
+  updateUI();
+});
+
+// ===== UPDATE UI =====
+function updateUI() {
+  function setBar(id, val, max = 100) {
+    const pct = clamp(val / max * 100, 0, 100);
+    $(id).style.width = pct + '%';
+  }
+
+  setBar('bar-hp', S.hp);
+  setBar('bar-food', S.food);
+  setBar('bar-sleep', S.sleep);
+  setBar('bar-wc', S.wc);
+  setBar('bar-tobacco', Math.min(S.tobacco, 100));
+
+  $('val-hp').textContent = Math.floor(S.hp) + '%';
+  $('val-food').textContent = Math.floor(S.food) + '%';
+  $('val-sleep').textContent = Math.floor(S.sleep) + '%';
+  $('val-wc').textContent = Math.floor(S.wc) + '%';
+  $('val-tobacco').textContent = Math.floor(S.tobacco) + '%';
+
+  if (S.tobacco > 100) {
+    $('bar-tobacco').style.width = '100%';
+    $('bar-tobacco').style.background = `linear-gradient(90deg, var(--green-dark), var(--green-neon), ${S.tobacco > 120 ? 'var(--red-light)' : 'var(--green-neon)'})`;
+  } else {
+    $('bar-tobacco').style.background = '';
+  }
+
+  $('time-display').textContent = `Month ${S.month} · Day ${S.day} · ${String(S.hour).padStart(2,'0')}:${String(S.minute).padStart(2,'0')}`;
+
+  $('money-val').textContent = `£${S.money.toLocaleString()}`;
+  $('money-val').className = 'val' + (S.money < 0 ? ' negative' : '');
+  $('revenue-val').textContent = `£${S.monthRevenue.toLocaleString()}`;
+  $('expense-val').textContent = `£${S.monthExpense.toLocaleString()}`;
+  $('staff-val').textContent = `${S.staff}명`;
+
+  setBar('bar-work', S.workProgress);
+  $('val-work').textContent = Math.floor(S.workProgress) + '%';
+
+  const speed = getWorkSpeed();
+  $('work-speed-label').textContent = `속도: ×${speed.toFixed(1)}`;
+  $('work-speed-label').style.color = speed > 1 ? 'var(--green-neon)' : 'var(--gold-dim)';
+
+  $('balloon-customers').textContent = Math.floor(S.customers);
+  const bScale = clamp(0.5 + S.customers / 500, 0.3, 2.0);
+  $('main-balloon').style.transform = `scale(${bScale})`;
+
+  const buff = $('buff-indicator');
+  if (S.tobacco > 120) {
+    buff.className = 'debuff';
+    buff.style.display = 'block';
+    buff.textContent = `⚠ 과흡연 ${Math.floor(S.tobacco)}% — 생명력 감소 중!`;
+  } else if (S.tobacco >= 70) {
+    buff.className = 'buff';
+    buff.style.display = 'block';
+    buff.textContent = `⚡ 각성 상태 — 업무 속도 ×${speed.toFixed(1)}`;
+  } else {
+    buff.style.display = 'none';
+  }
+
+  const entContainer = $('enterprise-balloons');
+  entContainer.innerHTML = '';
+  S.enterpriseContracts.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'ent-balloon';
+    div.title = `${c.name}: ${Math.floor(c.value)}% (클릭하여 작업)`;
+    div.innerHTML = `<span>${c.name}<br>${Math.floor(c.value)}%</span>`;
+    div.style.opacity = c.value < 30 ? '0.5' : '1';
+    if (c.value < 30) div.style.boxShadow = '0 0 10px var(--red-light)';
+    div.addEventListener('click', () => doEntWork(i));
+    entContainer.appendChild(div);
+  });
+
+  if (S.sleeping) {
+    $('sleep-info').textContent = `수면 중... 수면 게이지: ${Math.floor(S.sleep)}%`;
+  }
+}
+
+// ===== GAME LOOP =====
+function gameLoop(ts) {
+  if (!lastTick) lastTick = ts;
+  tickAccum += ts - lastTick;
+  lastTick = ts;
+
+  while (tickAccum >= TICK_RATE) {
+    tickAccum -= TICK_RATE;
+    gameTick();
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ===== BUTTON BINDINGS =====
+$('btn-work').addEventListener('click', doWork);
+$('btn-smoke').addEventListener('click', doSmoke);
+$('btn-eat').addEventListener('click', doEat);
+$('btn-sleep').addEventListener('click', doSleep);
+$('btn-wc').addEventListener('click', doWC);
+$('btn-hire').addEventListener('click', doHire);
+$('btn-medicine').addEventListener('click', doMedicine);
+$('btn-expand').addEventListener('click', () => toast('준비 중입니다. 다음 업데이트를 기다려주세요!'));
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (S.gameOver) return;
+  switch(e.key.toLowerCase()) {
+    case 'w': case 'ㅈ': doWork(); break;
+    case 's': case 'ㄴ': doSmoke(); break;
+    case 'e': case 'ㄷ': doEat(); break;
+    case 'r': case 'ㄱ': doSleep(); break;
+    case 't': case 'ㅅ': doWC(); break;
+  }
+});
+
+// Hold to work
+let workInterval = null;
+$('btn-work').addEventListener('mousedown', () => {
+  workInterval = setInterval(doWork, 100);
+});
+document.addEventListener('mouseup', () => {
+  if (workInterval) { clearInterval(workInterval); workInterval = null; }
+});
+
+// ===== START =====
+$('start-btn').addEventListener('click', () => {
+  $('start-screen').style.display = 'none';
+  log('=== 담풍사(T.B.C.) 개업! ===', 'success');
+  log('W: 일하기 | S: 흡연 | E: 식사 | R: 수면 | T: 화장실', '');
+  updateUI();
+  requestAnimationFrame(gameLoop);
+});
+</script>
+</body>
+</html>
